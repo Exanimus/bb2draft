@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
@@ -18,6 +18,8 @@ export default function MultiplayerApp() {
   const [error, setError] = useState("");
   const [draftOptions, setDraftOptions] = useState<string[]>([]);
   const [lastTurnIndex, setLastTurnIndex] = useState<number>(-1);
+  const [chatMessage, setChatMessage] = useState("");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const userId = useMemo(() => getUserId(), []);
 
@@ -27,6 +29,7 @@ export default function MultiplayerApp() {
   const startDraft = useMutation(api.rooms.startDraft);
   const makePick = useMutation(api.drafts.makePick);
   const updateLastSeen = useMutation(api.rooms.updateLastSeen);
+  const sendMessage = useMutation(api.chat.sendMessage);
 
   // Queries
   const room = useQuery(
@@ -39,6 +42,10 @@ export default function MultiplayerApp() {
   );
   const options = useQuery(
     api.drafts.getDraftOptions,
+    roomId ? { roomId } : "skip"
+  );
+  const messages = useQuery(
+    api.chat.getMessages,
     roomId ? { roomId } : "skip"
   );
 
@@ -64,6 +71,11 @@ export default function MultiplayerApp() {
 
     return () => clearInterval(interval);
   }, [roomId, userId, updateLastSeen]);
+
+  // Auto-scroll chat to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   // Check for reconnection
   useEffect(() => {
@@ -158,6 +170,23 @@ export default function MultiplayerApp() {
       await makePick({ roomId, userId, race });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to make pick");
+    }
+  };
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!roomId || !chatMessage.trim() || !myParticipant) return;
+
+    try {
+      await sendMessage({
+        roomId,
+        userId,
+        userName: myParticipant.name,
+        text: chatMessage.trim(),
+      });
+      setChatMessage("");
+    } catch (err) {
+      console.error("Failed to send message:", err);
     }
   };
 
@@ -362,8 +391,42 @@ export default function MultiplayerApp() {
             </div>
 
             {error && (
-              <div className="bg-red-900/50 border border-red-700 rounded-lg p-3 text-sm">
-                {error}
+              <div className="bg-gradient-to-r from-red-900/60 to-orange-900/40 border border-red-600/50 rounded-xl p-5 shadow-lg">
+                <div className="flex items-start gap-3">
+                  <div className="text-3xl">
+                    {error.includes("already started") ? "🚫" : 
+                     error.includes("full") ? "👥" :
+                     error.includes("not found") ? "❓" : "⚠️"}
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-bold text-lg mb-1">
+                      {error.includes("already started") ? "Draft Already Started" :
+                       error.includes("full") ? "Room is Full" :
+                       error.includes("not found") ? "Room Not Found" : "Error"}
+                    </div>
+                    <div className="text-sm opacity-90 mb-3">
+                      {error.includes("already started") 
+                        ? "This draft is already in progress. Players can no longer join this room."
+                        : error.includes("full")
+                        ? "This room has reached its maximum number of players."
+                        : error.includes("not found")
+                        ? "No room exists with this code. Please check the code and try again."
+                        : error}
+                    </div>
+                    {error.includes("already started") && (
+                      <button
+                        onClick={() => {
+                          setError("");
+                          setJoinCode("");
+                          setMode("menu");
+                        }}
+                        className="text-sm bg-slate-700 hover:bg-slate-600 rounded-lg px-4 py-2 font-semibold"
+                      >
+                        Create New Room Instead
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 
@@ -450,6 +513,50 @@ export default function MultiplayerApp() {
                   ({room.excludedRaces.length} races excluded)
                 </div>
               )}
+            </div>
+
+            {/* Chat */}
+            <div>
+              <div className="text-sm opacity-90 mb-3">Chat</div>
+              <div className="bg-slate-700/30 rounded-lg border border-slate-600">
+                <div className="h-48 overflow-y-auto p-4 space-y-2">
+                  {messages && messages.length > 0 ? (
+                    messages.map((msg: any) => (
+                      <div
+                        key={msg._id}
+                        className={`text-sm ${
+                          msg.userId === userId ? "text-right" : "text-left"
+                        }`}
+                      >
+                        <span className="font-semibold text-amber-400">{msg.userName}:</span>{" "}
+                        <span className="opacity-90">{msg.text}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-sm opacity-50 text-center py-8">
+                      No messages yet. Say hello! 👋
+                    </div>
+                  )}
+                  <div ref={messagesEndRef} />
+                </div>
+                <form onSubmit={handleSendMessage} className="border-t border-slate-600 p-3 flex gap-2">
+                  <input
+                    type="text"
+                    value={chatMessage}
+                    onChange={(e) => setChatMessage(e.target.value)}
+                    placeholder="Type a message..."
+                    className="flex-1 rounded-md bg-slate-600 px-3 py-2 text-sm"
+                    maxLength={500}
+                  />
+                  <button
+                    type="submit"
+                    disabled={!chatMessage.trim()}
+                    className="rounded-md bg-amber-500 px-4 py-2 text-sm font-semibold hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Send
+                  </button>
+                </form>
+              </div>
             </div>
 
             {error && (
@@ -572,6 +679,50 @@ export default function MultiplayerApp() {
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+
+            {/* Chat */}
+            <div>
+              <div className="text-sm opacity-90 mb-3">Chat</div>
+              <div className="bg-slate-700/30 rounded-lg border border-slate-600">
+                <div className="h-48 overflow-y-auto p-4 space-y-2">
+                  {messages && messages.length > 0 ? (
+                    messages.map((msg: any) => (
+                      <div
+                        key={msg._id}
+                        className={`text-sm ${
+                          msg.userId === userId ? "text-right" : "text-left"
+                        }`}
+                      >
+                        <span className="font-semibold text-amber-400">{msg.userName}:</span>{" "}
+                        <span className="opacity-90">{msg.text}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-sm opacity-50 text-center py-8">
+                      No messages yet. Say hello! 👋
+                    </div>
+                  )}
+                  <div ref={messagesEndRef} />
+                </div>
+                <form onSubmit={handleSendMessage} className="border-t border-slate-600 p-3 flex gap-2">
+                  <input
+                    type="text"
+                    value={chatMessage}
+                    onChange={(e) => setChatMessage(e.target.value)}
+                    placeholder="Type a message..."
+                    className="flex-1 rounded-md bg-slate-600 px-3 py-2 text-sm"
+                    maxLength={500}
+                  />
+                  <button
+                    type="submit"
+                    disabled={!chatMessage.trim()}
+                    className="rounded-md bg-amber-500 px-4 py-2 text-sm font-semibold hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Send
+                  </button>
+                </form>
               </div>
             </div>
           </main>

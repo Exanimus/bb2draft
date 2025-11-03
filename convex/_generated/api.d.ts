@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as chat from "../chat.js";
 import type * as drafts from "../drafts.js";
 import type * as helpers from "../helpers.js";
 import type * as rooms from "../rooms.js";
@@ -27,6 +28,7 @@ import type {
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  chat: typeof chat;
   drafts: typeof drafts;
   helpers: typeof helpers;
   rooms: typeof rooms;

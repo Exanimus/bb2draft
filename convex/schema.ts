@@ -31,4 +31,13 @@ export default defineSchema({
     .index("by_room", ["roomId"])
     .index("by_room_and_user", ["roomId", "userId"])
     .index("by_user", ["userId"]),
+
+  messages: defineTable({
+    roomId: v.id("rooms"),
+    userId: v.string(), // Anonymous user ID
+    userName: v.string(),
+    text: v.string(),
+    sentAt: v.number(),
+  })
+    .index("by_room", ["roomId", "sentAt"]),
 });
