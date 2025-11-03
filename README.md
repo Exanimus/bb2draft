@@ -9,6 +9,7 @@ A themed draft tool for selecting Blood Bowl 2 races with automatic persistence 
 
 ## Features
 
+### Local Mode (Original)
 - ✨ **Themed Dark Fantasy UI** - Beautiful gradient backgrounds and smooth interactions
 - 🎲 **3-Option Draft System** - Pick from 3 random races each turn
 - 💾 **Auto-Save Progress** - Uses localStorage to persist draft state
@@ -17,6 +18,15 @@ A themed draft tool for selecting Blood Bowl 2 races with automatic persistence 
 - 🔄 **Reroll Options** - Don't like the choices? Reroll them
 - ⏸️ **Pause & Resume** - Continue your draft later
 - 📱 **Responsive Design** - Works on desktop and mobile
+
+### Multiplayer Mode (NEW! 🌐)
+- 🔗 **Join via Room Code** - Share a 4-digit code with friends
+- ⚡ **Real-Time Sync** - See picks and updates instantly across all devices
+- 🎮 **Host Controls** - Create room, configure rules, start the draft
+- 🔄 **Reconnection** - Lost connection? Rejoin anytime with your room code
+- 🎯 **Turn-Based Drafting** - Each player picks when it's their turn
+- 🚫 **Session Locking** - No new players can join after draft starts
+- 💾 **Powered by Convex** - Fast, reliable real-time database
 
 ## Quick Start
 
@@ -42,12 +52,35 @@ npm run preview
 
 ## Usage
 
+### Local Mode
 1. **Setup Players**: Enter the number of players (1-12) and their names
 2. **Start Draft**: Click "Start Draft" to begin
 3. **Pick Races**: Each player selects from 3 random race options
 4. **Reroll** (optional): Don't like the options? Click "Reroll Options"
 5. **View Results**: See final picks with race descriptions and emojis
 6. **Export**: Download results as JSON for record-keeping
+
+### Multiplayer Mode Setup
+
+To enable multiplayer features, see [MULTIPLAYER_SETUP.md](MULTIPLAYER_SETUP.md) for detailed instructions.
+
+**Quick Setup:**
+```bash
+# Initialize Convex backend
+npx convex dev --once --configure=new
+
+# Terminal 1: Start Convex
+npm run dev:convex
+
+# Terminal 2: Start Vite
+npm run dev
+```
+
+Once set up, you can:
+- Create a room and get a 4-digit code
+- Share the code with friends
+- Join from any device/browser
+- Draft in real-time with turn-based picking
 
 ## Available Races
 
