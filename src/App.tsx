@@ -110,6 +110,8 @@ export default function App(): JSX.Element {
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [roundOptions, setRoundOptions] = useState<string[]>([]);
   const [started, setStarted] = useState<boolean>(false);
+  const [excludedRaces, setExcludedRaces] = useState<string[]>([]);
+  const [showRaceFilter, setShowRaceFilter] = useState<boolean>(false);
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -123,6 +125,7 @@ export default function App(): JSX.Element {
           setAvailable(parsed.available ?? ALL_RACES);
           setCurrentIndex(parsed.currentIndex ?? 0);
           setStarted(parsed.started ?? false);
+          setExcludedRaces(parsed.excludedRaces ?? []);
         }
       }
     } catch (e) {
@@ -132,13 +135,13 @@ export default function App(): JSX.Element {
 
   // Persist state
   useEffect(() => {
-    const payload = { players, available, currentIndex, started };
+    const payload = { players, available, currentIndex, started, excludedRaces };
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
     } catch (e) {
       console.warn("Failed to save state", e);
     }
-  }, [players, available, currentIndex, started]);
+  }, [players, available, currentIndex, started, excludedRaces]);
 
   // Generate options with useCallback to fix dependency warning
   const generateOptions = useCallback(() => {
@@ -159,10 +162,28 @@ export default function App(): JSX.Element {
   function startGame() {
     const trimmedNames = names.slice(0, playerCount).map((n, i) => n.trim() || `Player ${i + 1}`);
     const initialPlayers: Player[] = trimmedNames.map((n, i) => ({ id: i, name: n }));
+    // Filter out excluded races
+    const availableRaces = ALL_RACES.filter(race => !excludedRaces.includes(race));
     setPlayers(initialPlayers);
-    setAvailable(ALL_RACES.filter(Boolean));
+    setAvailable(availableRaces);
     setCurrentIndex(0);
     setStarted(true);
+  }
+
+  function toggleRaceExclusion(race: string) {
+    setExcludedRaces(prev => 
+      prev.includes(race) 
+        ? prev.filter(r => r !== race)
+        : [...prev, race]
+    );
+  }
+
+  function clearAllExclusions() {
+    setExcludedRaces([]);
+  }
+
+  function excludeAllRaces() {
+    setExcludedRaces([...ALL_RACES]);
   }
 
   function pickRace(race: string) {
@@ -203,44 +224,49 @@ export default function App(): JSX.Element {
     setCurrentIndex(0);
     setRoundOptions([]);
     setStarted(false);
+    setExcludedRaces([]);
     localStorage.removeItem(STORAGE_KEY);
   }
 
   const isFinished = useMemo(() => players.length > 0 && players.every((p) => p.pick), [players]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-neutral-900 to-amber-900 text-slate-100 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-neutral-900 to-amber-900 text-slate-100 p-3 sm:p-6">
       <div className="max-w-4xl mx-auto">
-        <header className="mb-6 flex items-center justify-between">
-          <h1 className="text-3xl font-extrabold tracking-tight">Blood Bowl 2 — Race Picker</h1>
-          <div className="text-sm opacity-80">Themed · Persistent · Up to 12 players</div>
+        <header className="mb-4 sm:mb-6">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Blood Bowl 2 — Race Picker</h1>
+          <div className="text-xs sm:text-sm opacity-80 mt-1">Themed · Persistent · Up to 12 players</div>
         </header>
 
-        <main className="bg-slate-800/60 rounded-2xl p-6 shadow-2xl">
+        <main className="bg-slate-800/60 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-2xl">
           {!started && players.length === 0 && (
             <section className="space-y-4">
-              <div className="flex items-center gap-4">
-                <label className="whitespace-nowrap">Number of players</label>
-                <input
-                  type="number"
-                  min={1}
-                  max={12}
-                  value={playerCount}
-                  onChange={(e) => setPlayerCount(Math.max(1, Math.min(12, Number(e.target.value || 0))))}
-                  className="w-20 rounded-md bg-slate-700 px-3 py-1 text-center"
-                />
-                <button
-                  onClick={() => {
-                    const arr = Array.from({ length: playerCount }, (_, i) => `Player ${i + 1}`);
-                    setNames(arr);
-                  }}
-                  className="ml-auto rounded bg-amber-600 px-3 py-1 font-semibold hover:bg-amber-500"
-                >
-                  Autofill
-                </button>
-                <button onClick={resetAll} className="rounded bg-slate-700 px-3 py-1 hover:bg-slate-600">
-                  Reset
-                </button>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+                <div className="flex items-center gap-3 w-full sm:w-auto">
+                  <label className="whitespace-nowrap text-sm sm:text-base">Number of players</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={12}
+                    value={playerCount}
+                    onChange={(e) => setPlayerCount(Math.max(1, Math.min(12, Number(e.target.value || 0))))}
+                    className="w-16 sm:w-20 rounded-md bg-slate-700 px-2 sm:px-3 py-2 text-center touch-manipulation"
+                  />
+                </div>
+                <div className="flex gap-2 w-full sm:w-auto sm:ml-auto">
+                  <button
+                    onClick={() => {
+                      const arr = Array.from({ length: playerCount }, (_, i) => `Player ${i + 1}`);
+                      setNames(arr);
+                    }}
+                    className="flex-1 sm:flex-none rounded bg-amber-600 px-3 sm:px-4 py-2 text-sm sm:text-base font-semibold hover:bg-amber-500 active:bg-amber-600 touch-manipulation"
+                  >
+                    Autofill
+                  </button>
+                  <button onClick={resetAll} className="flex-1 sm:flex-none rounded bg-slate-700 px-3 sm:px-4 py-2 text-sm sm:text-base hover:bg-slate-600 active:bg-slate-700 touch-manipulation">
+                    Reset
+                  </button>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -254,7 +280,7 @@ export default function App(): JSX.Element {
                       setNames(copy);
                     }}
                     placeholder={`Player ${i + 1} name`}
-                    className="rounded-md bg-slate-700 px-3 py-2"
+                    className="rounded-md bg-slate-700 px-3 py-2.5 text-base touch-manipulation"
                   />
                 ))}
               </div>
@@ -262,30 +288,91 @@ export default function App(): JSX.Element {
               <div className="pt-4">
                 <button
                   onClick={startGame}
-                  className="rounded-xl bg-gradient-to-r from-rose-600 to-amber-500 px-4 py-2 font-bold shadow-lg hover:opacity-95"
+                  className="w-full sm:w-auto rounded-xl bg-gradient-to-r from-rose-600 to-amber-500 px-6 py-3 text-base sm:text-lg font-bold shadow-lg hover:opacity-95 active:opacity-90 touch-manipulation"
                 >
                   Start Draft
                 </button>
               </div>
 
-              <div className="mt-6 text-sm opacity-80">
-                <p>Available races total: <strong>{ALL_RACES.length}</strong></p>
-                <p className="mt-2">Note: progress is saved automatically to localStorage. You can continue later on the same browser.</p>
+              <div className="mt-6 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm opacity-80">
+                    <p>Available races: <strong>{ALL_RACES.length - excludedRaces.length}</strong> / {ALL_RACES.length}</p>
+                    {excludedRaces.length > 0 && (
+                      <p className="text-amber-400 mt-1">({excludedRaces.length} excluded)</p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => setShowRaceFilter(!showRaceFilter)}
+                    className="rounded bg-slate-700 px-3 sm:px-4 py-2 text-sm sm:text-base hover:bg-slate-600 active:bg-slate-700 touch-manipulation whitespace-nowrap"
+                  >
+                    {showRaceFilter ? "Hide" : "Filter Races"} {showRaceFilter ? "▲" : "▼"}
+                  </button>
+                </div>
+
+                {showRaceFilter && (
+                  <div className="bg-slate-700/40 rounded-lg p-3 sm:p-4 space-y-3">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                      <h3 className="font-semibold text-sm sm:text-base">Select races to exclude:</h3>
+                      <div className="flex gap-2 w-full sm:w-auto">
+                        <button
+                          onClick={clearAllExclusions}
+                          className="flex-1 sm:flex-none text-xs sm:text-sm rounded bg-green-600 px-2.5 py-1.5 hover:bg-green-500 active:bg-green-600 touch-manipulation"
+                        >
+                          Include All
+                        </button>
+                        <button
+                          onClick={excludeAllRaces}
+                          className="flex-1 sm:flex-none text-xs sm:text-sm rounded bg-red-600 px-2.5 py-1.5 hover:bg-red-500 active:bg-red-600 touch-manipulation"
+                        >
+                          Exclude All
+                        </button>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-80 overflow-y-auto custom-scrollbar">
+                      {ALL_RACES.map((race) => (
+                        <label
+                          key={race}
+                          className={`flex items-center gap-2 p-2 rounded cursor-pointer transition-colors ${
+                            excludedRaces.includes(race)
+                              ? "bg-red-900/30 border border-red-700"
+                              : "bg-slate-600/30 border border-slate-600 hover:bg-slate-600/50"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={!excludedRaces.includes(race)}
+                            onChange={() => toggleRaceExclusion(race)}
+                            className="w-5 h-5 sm:w-4 sm:h-4 touch-manipulation"
+                          />
+                          <span className="text-sm flex items-center gap-1">
+                            <span>{raceEmoji(race)}</span>
+                            <span className={excludedRaces.includes(race) ? "line-through opacity-50" : ""}>
+                              {race}
+                            </span>
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <p className="text-xs opacity-70 mt-2">Note: progress is saved automatically to localStorage. You can continue later on the same browser.</p>
               </div>
             </section>
           )}
 
           {/* Active draft view */}
           {started && players.length > 0 && currentIndex < players.length && (
-            <section className="space-y-6">
+            <section className="space-y-4 sm:space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-sm opacity-80">Turn</div>
-                  <h2 className="text-2xl font-bold">{players[currentIndex].name}</h2>
+                  <div className="text-xs sm:text-sm opacity-80">Turn</div>
+                  <h2 className="text-xl sm:text-2xl font-bold">{players[currentIndex].name}</h2>
                 </div>
                 <div className="text-right">
-                  <div className="text-sm opacity-80">Available races</div>
-                  <div className="text-xl font-semibold">{available.length}</div>
+                  <div className="text-xs sm:text-sm opacity-80">Available races</div>
+                  <div className="text-lg sm:text-xl font-semibold">{available.length}</div>
                 </div>
               </div>
 
@@ -294,17 +381,17 @@ export default function App(): JSX.Element {
                   <div className="col-span-full p-6 bg-slate-700/40 rounded-lg text-center">No options available — draft finished.</div>
                 )}
                 {roundOptions.map((r) => (
-                  <div key={r} className="p-4 rounded-xl bg-slate-700/50 border border-slate-600 flex flex-col justify-between">
+                  <div key={r} className="p-4 sm:p-5 rounded-xl bg-slate-700/50 border border-slate-600 flex flex-col justify-between min-h-[200px]">
                     <div>
-                      <div className="text-4xl">{raceEmoji(r)}</div>
-                      <h3 className="mt-2 text-xl font-bold">{r}</h3>
-                      <p className="mt-1 text-sm opacity-80">{getRaceBlurb(r)}</p>
+                      <div className="text-4xl sm:text-5xl">{raceEmoji(r)}</div>
+                      <h3 className="mt-2 text-lg sm:text-xl font-bold">{r}</h3>
+                      <p className="mt-1 text-sm sm:text-base opacity-80">{getRaceBlurb(r)}</p>
                     </div>
 
                     <div className="mt-4">
                       <button
                         onClick={() => pickRace(r)}
-                        className="w-full rounded-md bg-amber-500 py-2 font-semibold hover:bg-amber-400"
+                        className="w-full rounded-md bg-amber-500 py-3 text-base sm:text-lg font-semibold hover:bg-amber-400 active:bg-amber-500 touch-manipulation"
                       >
                         Pick {r}
                       </button>
@@ -313,47 +400,47 @@ export default function App(): JSX.Element {
                 ))}
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
                 <button
                   onClick={generateOptions}
-                  className="rounded bg-slate-700 px-3 py-1 hover:bg-slate-600"
+                  className="rounded bg-slate-700 px-4 py-2.5 text-sm sm:text-base hover:bg-slate-600 active:bg-slate-700 touch-manipulation"
                 >
                   Reroll Options
                 </button>
 
                 <button
                   onClick={skipPlayer}
-                  className="rounded bg-red-700 px-3 py-1 hover:bg-red-600"
+                  className="rounded bg-red-700 px-4 py-2.5 text-sm sm:text-base hover:bg-red-600 active:bg-red-700 touch-manipulation"
                 >
                   Skip Player
                 </button>
 
-                <div className="ml-auto text-sm opacity-80">Player {currentIndex + 1} / {players.length}</div>
+                <div className="sm:ml-auto text-center sm:text-right text-sm opacity-80 py-2 sm:py-0">Player {currentIndex + 1} / {players.length}</div>
               </div>
             </section>
           )}
 
           {/* Final screen */}
           {!started && players.length > 0 && (isFinished ? (
-            <section className="pt-6">
-              <h2 className="text-2xl font-bold mb-4">Final Results</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <section className="pt-4 sm:pt-6">
+              <h2 className="text-xl sm:text-2xl font-bold mb-4">Final Results</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 {players.map((p) => (
-                  <div key={p.id} className="rounded-xl p-4 bg-gradient-to-br from-slate-700/60 to-amber-700/10 border border-slate-600">
+                  <div key={p.id} className="rounded-xl p-4 sm:p-5 bg-gradient-to-br from-slate-700/60 to-amber-700/10 border border-slate-600">
                     <div className="flex items-center gap-3">
-                      <div className="text-5xl">{raceEmoji(p.pick ?? "")}</div>
+                      <div className="text-4xl sm:text-5xl">{raceEmoji(p.pick ?? "")}</div>
                       <div>
-                        <div className="text-sm opacity-80">{p.name}</div>
-                        <div className="text-xl font-bold">{p.pick ?? "—"}</div>
+                        <div className="text-xs sm:text-sm opacity-80">{p.name}</div>
+                        <div className="text-lg sm:text-xl font-bold">{p.pick ?? "—"}</div>
                       </div>
                     </div>
-                    <div className="mt-3 text-sm opacity-80">{p.pick ? getRaceBlurb(p.pick) : "No pick"}</div>
+                    <div className="mt-3 text-xs sm:text-sm opacity-80">{p.pick ? getRaceBlurb(p.pick) : "No pick"}</div>
                   </div>
                 ))}
               </div>
 
-              <div className="mt-6 flex gap-3">
-                <button onClick={resetAll} className="rounded bg-slate-700 px-3 py-1">Start Over</button>
+              <div className="mt-6 flex flex-col sm:flex-row gap-2 sm:gap-3">
+                <button onClick={resetAll} className="rounded bg-slate-700 px-4 py-2.5 text-sm sm:text-base hover:bg-slate-600 active:bg-slate-700 touch-manipulation">Start Over</button>
                 <button
                   onClick={() => {
                     const dataStr = JSON.stringify(players, null, 2);
@@ -365,39 +452,39 @@ export default function App(): JSX.Element {
                     a.click();
                     URL.revokeObjectURL(url);
                   }}
-                  className="rounded bg-amber-500 px-3 py-1 font-semibold"
+                  className="rounded bg-amber-500 px-4 py-2.5 text-sm sm:text-base font-semibold hover:bg-amber-400 active:bg-amber-500 touch-manipulation"
                 >
                   Export Results
                 </button>
               </div>
             </section>
           ) : (
-            <section className="pt-6">
-              <h2 className="text-2xl font-bold">Draft paused / finished early</h2>
+            <section className="pt-4 sm:pt-6">
+              <h2 className="text-xl sm:text-2xl font-bold">Draft paused / finished early</h2>
               <div className="mt-4">
                 <div className="text-sm opacity-80">Current picks:</div>
                 <ul className="mt-2 space-y-2">
                   {players.map((p) => (
                     <li key={p.id} className="flex items-center gap-3">
-                      <div className="text-lg">{raceEmoji(p.pick ?? "")}</div>
+                      <div className="text-2xl sm:text-lg">{raceEmoji(p.pick ?? "")}</div>
                       <div>
-                        <div className="text-sm opacity-80">{p.name}</div>
-                        <div className="font-semibold">{p.pick ?? "—"}</div>
+                        <div className="text-xs sm:text-sm opacity-80">{p.name}</div>
+                        <div className="text-base sm:text-lg font-semibold">{p.pick ?? "—"}</div>
                       </div>
                     </li>
                   ))}
                 </ul>
               </div>
 
-              <div className="mt-6">
-                <button onClick={() => setStarted(true)} className="rounded bg-amber-500 px-3 py-1 font-semibold">Resume Draft</button>
-                <button onClick={resetAll} className="ml-2 rounded bg-slate-700 px-3 py-1">Reset</button>
+              <div className="mt-6 flex flex-col sm:flex-row gap-2 sm:gap-3">
+                <button onClick={() => setStarted(true)} className="rounded bg-amber-500 px-4 py-2.5 text-sm sm:text-base font-semibold hover:bg-amber-400 active:bg-amber-500 touch-manipulation">Resume Draft</button>
+                <button onClick={resetAll} className="rounded bg-slate-700 px-4 py-2.5 text-sm sm:text-base hover:bg-slate-600 active:bg-slate-700 touch-manipulation">Reset</button>
               </div>
             </section>
           ))}
         </main>
 
-        <footer className="mt-6 text-sm opacity-70 text-center">Made for you — enjoy the draft 🎲</footer>
+        <footer className="mt-4 sm:mt-6 text-xs sm:text-sm opacity-70 text-center pb-4">Made for you — enjoy the draft 🎲</footer>
       </div>
     </div>
   );
