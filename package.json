@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "dev:convex": "convex dev",
-    "build": "tsc && vite build",
+    "build": "convex deploy --cmd 'npm run build:app'",
+    "build:app": "tsc && vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },

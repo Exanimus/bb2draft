@@ -1,0 +1,6 @@
+{
+  "buildCommand": "npm run build",
+  "env": {
+    "CONVEX_DEPLOY_KEY": "@convex-deploy-key"
+  }
+}

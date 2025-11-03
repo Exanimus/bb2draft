@@ -168,7 +168,7 @@ export default function MultiplayerApp() {
   };
 
   const isHost = room?.hostId === userId;
-  const myParticipant = room?.participants.find((p) => p.userId === userId);
+  const myParticipant = room?.participants.find((p: any) => p.userId === userId);
   const isMyTurn = currentTurn?.userId === userId;
 
   const regenerateOptions = useCallback(() => {
@@ -416,7 +416,7 @@ export default function MultiplayerApp() {
                 Players ({room.participants.length} / {room.playerCount})
               </div>
               <div className="space-y-2">
-                {room.participants.map((p, idx) => (
+                {room.participants.map((p: any, idx: number) => (
                   <div
                     key={p._id}
                     className="bg-slate-700/50 rounded-lg p-4 flex items-center justify-between"
@@ -558,7 +558,7 @@ export default function MultiplayerApp() {
             <div>
               <div className="text-sm opacity-90 mb-3">Draft Progress</div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {room.participants.map((p) => (
+                {room.participants.map((p: any) => (
                   <div
                     key={p._id}
                     className={`rounded-lg p-4 ${
@@ -605,7 +605,7 @@ export default function MultiplayerApp() {
 
           <main className="bg-slate-800/60 rounded-2xl p-6 shadow-2xl space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {room.participants.map((p) => (
+              {room.participants.map((p: any) => (
                 <div
                   key={p._id}
                   className="rounded-xl p-5 bg-gradient-to-br from-slate-700/60 to-amber-700/10 border border-slate-600"
