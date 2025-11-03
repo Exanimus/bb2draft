@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
@@ -17,6 +17,7 @@ export default function MultiplayerApp() {
   const [showRaceFilter, setShowRaceFilter] = useState(false);
   const [error, setError] = useState("");
   const [draftOptions, setDraftOptions] = useState<string[]>([]);
+  const [lastTurnIndex, setLastTurnIndex] = useState<number>(-1);
 
   const userId = useMemo(() => getUserId(), []);
 
@@ -32,10 +33,6 @@ export default function MultiplayerApp() {
     api.rooms.getRoomByCode,
     roomCode ? { code: roomCode } : "skip"
   );
-  const availableRaces = useQuery(
-    api.rooms.getAvailableRaces,
-    roomId ? { roomId } : "skip"
-  );
   const currentTurn = useQuery(
     api.drafts.getCurrentTurn,
     roomId ? { roomId } : "skip"
@@ -45,12 +42,17 @@ export default function MultiplayerApp() {
     roomId ? { roomId } : "skip"
   );
 
-  // Update options when they change
+  // Update options only when turn changes (not on every query update)
   useEffect(() => {
-    if (options && options.length > 0) {
-      setDraftOptions(options);
+    if (room && room.status === "in_progress") {
+      const currentTurnIndex = room.currentTurnIndex;
+      // Only update options when turn actually changes
+      if (currentTurnIndex !== lastTurnIndex && options && options.length > 0) {
+        setDraftOptions(options);
+        setLastTurnIndex(currentTurnIndex);
+      }
     }
-  }, [options]);
+  }, [room, options, lastTurnIndex]);
 
   // Heartbeat to update last seen
   useEffect(() => {
@@ -171,12 +173,6 @@ export default function MultiplayerApp() {
   const myParticipant = room?.participants.find((p: any) => p.userId === userId);
   const isMyTurn = currentTurn?.userId === userId;
 
-  const regenerateOptions = useCallback(() => {
-    if (availableRaces && availableRaces.length > 0) {
-      const shuffled = [...availableRaces].sort(() => Math.random() - 0.5);
-      setDraftOptions(shuffled.slice(0, Math.min(3, shuffled.length)));
-    }
-  }, [availableRaces]);
 
   const toggleRaceExclusion = (race: string) => {
     setExcludedRaces(prev => 
@@ -542,15 +538,6 @@ export default function MultiplayerApp() {
                       </div>
                     </div>
                   ))}
-                </div>
-
-                <div className="flex justify-center">
-                  <button
-                    onClick={regenerateOptions}
-                    className="rounded bg-slate-700 px-4 py-2 text-sm hover:bg-slate-600"
-                  >
-                    🔄 Reroll Options
-                  </button>
                 </div>
               </>
             )}

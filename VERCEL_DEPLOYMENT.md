@@ -1,10 +1,10 @@
 # Vercel Deployment Guide
 
-## Required Environment Variables
+## Required Environment Variable
 
-You need to add **two** environment variables to Vercel:
+You only need to add **ONE** environment variable to Vercel:
 
-### 1. VITE_CONVEX_URL (Frontend)
+### VITE_CONVEX_URL
 
 This is for the React app to connect to Convex.
 
@@ -13,17 +13,7 @@ This is for the React app to connect to Convex.
 VITE_CONVEX_URL=https://cautious-pigeon-57.convex.cloud
 ```
 
-### 2. CONVEX_DEPLOY_KEY (Build Process)
-
-This allows Vercel to deploy your Convex functions during build.
-
-**How to get it:**
-
-1. Go to https://dashboard.convex.dev/t/gabrielius-katkus/bb2draft-81f0b
-2. Click **Settings** → **Deploy Keys**
-3. Click **Generate a deploy key**
-4. Select **Production**
-5. Copy the key (starts with `prod:...`)
+**Note:** We commit the `convex/_generated` files to git, so Vercel doesn't need to deploy Convex during build. This makes deployment much simpler!
 
 ## Setting Up Vercel
 
@@ -41,23 +31,19 @@ git push
 2. Import your GitHub repository
 3. **Before deploying**, add environment variables:
 
-### Step 3: Add Environment Variables
+### Step 3: Add Environment Variable
 
-In Vercel project settings:
+In Vercel project settings → Environment Variables:
 
-**Variable 1:**
-- Name: `VITE_CONVEX_URL`
-- Value: `https://cautious-pigeon-57.convex.cloud` (from your `.env.local`)
-- Environments: ✅ Production ✅ Preview ✅ Development
+- **Name:** `VITE_CONVEX_URL`
+- **Value:** `https://cautious-pigeon-57.convex.cloud` (copy from your `.env.local`)
+- **Environments:** ✅ Production ✅ Preview ✅ Development
 
-**Variable 2:**
-- Name: `CONVEX_DEPLOY_KEY`
-- Value: `prod:...` (from Convex dashboard)
-- Environments: ✅ Production ✅ Preview ✅ Development
+Click **Save**.
 
 ### Step 4: Deploy
 
-Click **Deploy**
+Click **Deploy** and wait for build to complete.
 
 ### Step 5: Configure Convex URL Allowlist
 
@@ -78,31 +64,24 @@ Click **Deploy**
 
 ## Troubleshooting
 
-### Build fails with "Cannot find module convex/_generated"
+### Build fails
 
-- Make sure `CONVEX_DEPLOY_KEY` is set
-- Check that the deploy key is valid (not expired)
-- Verify the key is for **Production** deployment
+- Verify `convex/_generated` folder is committed to git
+- Check that `npm run build` works locally
+- Look at Vercel build logs for specific errors
 
 ### Frontend can't connect to Convex
 
-- Check `VITE_CONVEX_URL` is set correctly
+- Check `VITE_CONVEX_URL` is set correctly in Vercel
 - Verify your Vercel domain is in Convex URL allowlist
 - Check browser console for CORS errors
+- Make sure you added both production and preview URLs to Convex
 
-### "Unauthorized" errors
+### Room codes not working
 
-- Regenerate your deploy key in Convex dashboard
-- Update `CONVEX_DEPLOY_KEY` in Vercel
-- Redeploy
-
-## Deploy Key Security
-
-⚠️ **Important:** Never commit your deploy key to Git!
-
-- It's automatically ignored in `.env.local`
-- Only add it to Vercel environment variables
-- Rotate it if accidentally exposed
+- Verify `VITE_CONVEX_URL` environment variable is set
+- Check that Convex backend is running (visit dashboard)
+- Try creating a new room to test
 
 ## Redeploying
 
@@ -116,16 +95,4 @@ git push
 
 Vercel will automatically rebuild and redeploy.
 
-## Manual Deploy (Alternative)
-
-If you prefer to deploy Convex separately:
-
-```bash
-# Deploy Convex first
-npx convex deploy --prod
-
-# Then build for Vercel (without deploying Convex)
-npm run build:app
-```
-
-Then in Vercel, change build command to just `npm run build:app`.
+**Note:** If you update Convex schema or functions, make sure to run `npm run dev:convex` locally first to regenerate the `convex/_generated` files, then commit those changes too.
