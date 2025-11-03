@@ -14,7 +14,7 @@ dist-ssr
 
 # Convex
 .convex
-convex/_generated
+# Note: We commit convex/_generated for easier Vercel deployment
 
 # Editor directories and files
 .vscode/*
